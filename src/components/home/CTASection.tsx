@@ -56,7 +56,7 @@ export function CTASection({ language }: CTASectionProps) {
 
           {/* Action Buttons */}
           <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12">
-            <Link to="/contact">
+            <Link to="/booking">
               <Button variant="hero" size="xl">
                 {t.cta}
               </Button>

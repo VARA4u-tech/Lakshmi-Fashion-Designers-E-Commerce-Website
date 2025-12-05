@@ -10,6 +10,7 @@ const navLinks = [
   { name: "Services", nameTE: "సేవలు", href: "/services" },
   { name: "Products", nameTE: "ఉత్పత్తులు", href: "/products" },
   { name: "Gallery", nameTE: "గ్యాలరీ", href: "/gallery" },
+  { name: "Book", nameTE: "బుక్", href: "/booking" },
   { name: "Contact", nameTE: "సంప్రదించండి", href: "/contact" },
 ];
 

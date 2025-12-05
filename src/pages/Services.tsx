@@ -207,7 +207,7 @@ const Services = () => {
                     </div>
                   </div>
                   
-                  <Link to="/contact">
+                  <Link to="/booking">
                     <Button variant="gold-outline" className="w-full">
                       <MessageCircle className="w-4 h-4" />
                       {t.cta}
