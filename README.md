@@ -1,6 +1,8 @@
 <div align="center">
 
 # 🪡 Lakshmi Fashion & Designers
+<img width="1024" height="1024" alt="favicon" src="https://github.com/user-attachments/assets/81d67fb2-2913-4fee-a980-2b54b9399f58" />
+
 
 <img width="256" alt="Lakshmi Fashion Logo" src="https://github.com/user-attachments/assets/81d67fb2-2913-4fee-a980-2b54b9399f58" />
 
