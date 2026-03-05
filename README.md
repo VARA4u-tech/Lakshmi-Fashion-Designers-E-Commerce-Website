@@ -1,8 +1,6 @@
 <div align="center">
 
 # 🪡 Lakshmi Fashion & Designers
-<img width="1024" height="1024" alt="favicon" src="https://github.com/user-attachments/assets/81d67fb2-2913-4fee-a980-2b54b9399f58" />
-
 
 <img width="256" alt="Lakshmi Fashion Logo" src="https://github.com/user-attachments/assets/81d67fb2-2913-4fee-a980-2b54b9399f58" />
 
@@ -14,7 +12,7 @@
 [![Supabase](https://img.shields.io/badge/Supabase-3ECF8E?style=for-the-badge&logo=supabase&logoColor=white)](https://supabase.com/)
 [![TypeScript](https://img.shields.io/badge/typescript-%23007ACC.svg?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 
-## </div>
+</div>
 
 ## ✨ Overview
 
@@ -57,7 +55,7 @@
 
    ```bash
    git clone <repo-url>
-   cd lakshmi-tailor-portal
+   cd lakshmi-tailor-portal/frontend
    ```
 
 2. **Install dependencies**
@@ -76,15 +74,18 @@
 ## 📐 Project Structure
 
 ```text
-├── src/
-│   ├── components/      # Reusable UI & Layout components
-│   ├── contexts/        # Language & Global state management
-│   ├── hooks/           # Custom React hooks
-│   ├── lib/             # Third-party configurations (Supabase, Utils)
-│   ├── pages/           # Individual page views
-│   └── assets/          # Static assets (Images, Logos)
-├── public/              # Global static assets
-└── tailwind.config.ts   # Custom theme & color tokens
+├── frontend/
+│   ├── src/             # Frontend source code
+│   │   ├── components/  # Reusable UI & Layout components
+│   │   ├── contexts/    # Language & Global state management
+│   │   ├── hooks/       # Custom React hooks
+│   │   ├── lib/         # Third-party configurations (Supabase, Utils)
+│   │   ├── pages/       # Individual page views
+│   │   └── assets/      # Static assets (Images, Logos)
+│   ├── public/          # Global static assets
+│   ├── tailwind.config.ts # Custom theme & color tokens
+│   └── package.json     # Frontend dependencies
+└── README.md            # Root documentation
 ```
 
 ---
