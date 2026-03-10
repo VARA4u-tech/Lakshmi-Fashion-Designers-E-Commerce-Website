@@ -8,7 +8,7 @@ export type WishlistItem = {
   category: string;
 };
 
-interface WishlistContextType {
+export interface WishlistContextType {
   wishlist: WishlistItem[];
   addToWishlist: (item: WishlistItem) => void;
   removeFromWishlist: (id: string) => void;
