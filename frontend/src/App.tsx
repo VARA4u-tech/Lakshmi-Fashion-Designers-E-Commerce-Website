@@ -22,6 +22,7 @@ const TermsOfService = lazy(() => import("./pages/TermsOfService"));
 const RefundPolicy = lazy(() => import("./pages/RefundPolicy"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 const Admin = lazy(() => import("./pages/Admin"));
+const Wishlist = lazy(() => import("@/pages/Wishlist")); // Added Wishlist support
 
 const queryClient = new QueryClient();
 
@@ -90,6 +91,14 @@ const AnimatedRoutes = () => {
           }
         />
         <Route
+          path="/wishlist"
+          element={
+            <PageTransition title="My Wishlist">
+              <Wishlist />
+            </PageTransition>
+          }
+        />
+        <Route
           path="/admin"
           element={
             <PageTransition title="Admin Dashboard">
@@ -135,6 +144,7 @@ const AnimatedRoutes = () => {
 };
 
 import { LanguageProvider } from "@/contexts/LanguageContext";
+import { WishlistProvider } from "@/contexts/WishlistContext";
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -142,16 +152,18 @@ const App = () => (
       <Toaster />
       <Sonner />
       <LanguageProvider>
-        <BrowserRouter
-          future={{
-            v7_startTransition: true,
-            v7_relativeSplatPath: true,
-          }}
-        >
-          <Suspense fallback={<PageLoader />}>
-            <AnimatedRoutes />
-          </Suspense>
-        </BrowserRouter>
+        <WishlistProvider>
+          <BrowserRouter
+            future={{
+              v7_startTransition: true,
+              v7_relativeSplatPath: true,
+            }}
+          >
+            <Suspense fallback={<PageLoader />}>
+              <AnimatedRoutes />
+            </Suspense>
+          </BrowserRouter>
+        </WishlistProvider>
       </LanguageProvider>
     </TooltipProvider>
   </QueryClientProvider>

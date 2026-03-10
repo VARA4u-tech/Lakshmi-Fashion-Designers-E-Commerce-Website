@@ -1,44 +1,15 @@
 import { useState, useEffect } from "react";
 import { Layout } from "@/components/layout/Layout";
+import { ScrollReveal } from "@/components/ui/ScrollReveal";
 import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
-import { MessageCircle, Filter, Loader2, IndianRupee, ShoppingBag } from "lucide-react";
-import { supabase } from "@/lib/supabase";
+import { ShoppingBag, Search, Filter, Loader2, Sparkles, ArrowRight } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
-
-const categories = {
-  en: [
-    "All",
-    "Earrings",
-    "Bangles",
-    "Saree Materials",
-    "Clips",
-    "Nail Polish",
-    "Mehendhi cone's",
-    "Threads",
-    "Cosmetics",
-    "Accessories",
-  ],
-  te: [
-    "అన్నీ",
-    "చెవి పోగులు",
-    "గాజులు",
-    "సారీ మెటీరియల్స్",
-    "క్లిప్స్",
-    "నైల్ పోలిస్",
-    "మేహేంధి కోన్లు",
-    "ట్రేధ్లు",
-    "సౌందర్య సాధనాలు",
-    "ఆభరణాలు",
-  ],
-};
+import { useWishlist } from "@/contexts/WishlistContext";
+import { Link } from "react-router-dom";
+import { toast } from "sonner";
+import { Heart } from "lucide-react";
 
 interface Product {
   id: string;
@@ -53,462 +24,238 @@ interface Product {
 
 const pageContent = {
   en: {
-    subtitle: "Fancy Store",
-    title: "Beautiful Accessories",
+    title: "Our Collections",
+    subtitle: "Premium Tailoring & Accessories",
     description:
-      "Complete your look with our curated collection of jewelry, bags, and fashion accessories.",
-    inStock: "In Stock",
-    outOfStock: "Out of Stock",
-    enquire: "Enquire Now",
-    filter: "Filter",
-    contactPrice: "Contact for Price",
-    noProducts: "No products found.",
+      "Discover our curated selection of high-quality fabrics, designer accessories, and custom-tailored masterpieces.",
+    searchPlaceholder: "Search collections...",
+    allCategories: "All Items",
+    noProducts: "No products found matching your criteria.",
+    buyNow: "Enquire Now",
   },
   te: {
-    subtitle: "ఫ్యాన్సీ స్టోర్",
-    title: "అందమైన యాక్సెసరీలు",
+    title: "మా సేకరణలు",
+    subtitle: "ప్రీమియం టైలరింగ్ & యాక్సెసరీలు",
     description:
-      "మా క్యూరేటెడ్ జ్యువెలరీ, బ్యాగులు మరియు ఫ్యాషన్ యాక్సెసరీల సేకరణతో మీ లుక్‌ను పూర్తి చేయండి.",
-    inStock: "స్టాక్‌లో ఉంది",
-    outOfStock: "స్టాక్ అయిపోయింది",
-    enquire: "ఇప్పుడు విచారించండి",
-    filter: "ఫిల్టర్",
-    contactPrice: "ధర కోసం సంప్రదించండి",
-    noProducts: "ఉత్పత్తులు కనుగొనబడలేదు.",
+      "అధిక-నాణ్యత ఫ్యాబ్రిక్స్, డిజైనర్ యాక్సెసరీలు మరియు కస్టమ్-టైలర్డ్ మాస్టర్‌పీస్‌ల మా ఎంపికను కనుగొనండి.",
+    searchPlaceholder: "సేకరణలను శోధించండి...",
+    allCategories: "అన్ని రకాలు",
+    noProducts: "మీ ప్రమాణాలకు సరిపోయే ఉత్పత్తులు ఏవీ కనుగొనబడలేదు.",
+    buyNow: "ఇప్పుడే విచారించండి",
   },
 };
 
 const Products = () => {
   const { language, setLanguage } = useLanguage();
-  const [selectedCategory, setSelectedCategory] = useState(0);
+  const { addToWishlist, removeFromWishlist, isInWishlist } = useWishlist();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-  const [recommendations, setRecommendations] = useState<Product[]>([]);
-  const [recommendationsLoading, setRecommendationsLoading] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState("all");
+  const [categories, setCategories] = useState<{ en: string; te: string }[]>([]);
 
   const t = pageContent[language];
-  const categoryList = categories[language];
-
-  const fetchRecommendations = async (productId: string) => {
-    setRecommendationsLoading(true);
-    try {
-      const response = await fetch(
-        `${import.meta.env.VITE_API_URL}/api/products/recommendations/${productId}`,
-      );
-      const data = await response.json();
-      if (data.success) {
-        setRecommendations(data.recommendations);
-      }
-    } catch (error) {
-      console.error("Error fetching recommendations:", error);
-    } finally {
-      setRecommendationsLoading(false);
-    }
-  };
-
-  const handleProductClick = (product: Product) => {
-    setSelectedProduct(product);
-    if (!product.id.startsWith("lp-")) {
-      // Only fetch for real DB products
-      fetchRecommendations(product.id);
-    } else {
-      setRecommendations([]);
-    }
-  };
-
-  const localProducts: Product[] = [
-    // Earrings
-    {
-      id: "lp-2",
-      name_en: "Crystal Studs",
-      name_te: "క్రిస్టల్ స్టడ్స్",
-      category: "Earrings",
-      category_te: "చెవి పోగులు",
-      price: 0,
-      image_url:
-        "https://i.ibb.co/BK7JDgsF/shopping-q-tbn-ANd9-Gc-Rpk-Xuf-HS4-Cg-F8-LVXVu-ZKgcr-Fjh-E0a0-ELto-e503w0-ZF16ifmf-CAIWZef9-Xg-UA0-zveb6-XB.webp",
-      in_stock: true,
-    },
-    {
-      id: "lp-3",
-      name_en: "Peacock Jhumkas",
-      name_te: "నెమలి జుంకాలు",
-      category: "Earrings",
-      category_te: "చెవి పోగులు",
-      price: 0,
-      image_url:
-        "https://i.ibb.co/TMbGPT8h/shopping-q-tbn-ANd9-Gc-RMFJakxf8-Xp-Vl-C1t-XBRW8l-Sw-Z9-UO8i1ci3vv-UAHu-Io4-ZCu-NDy-VLDDRKw-On8-Xs-PLP0-L.webp",
-      in_stock: true,
-    },
-    // Bangles
-    {
-      id: "lp-4",
-      name_en: "Silk Thread Bangles",
-      name_te: "సిల్క్ త్రెడ్ గాజులు",
-      category: "Bangles",
-      category_te: "గాజులు",
-      price: 0,
-      image_url:
-        "https://i.ibb.co/PGr3gfsD/shopping-q-tbn-ANd9-Gc-TPTOez-Mh-U45-JJW6za-P41-E4n-UWh2j7-Uc-WZ8vk-WJgd-F5-Bj-XTIU2en8-Yy9i-EWyhc-T2g7u-f.webp",
-      in_stock: true,
-    },
-    {
-      id: "lp-5",
-      name_en: "Bridal Chura Set",
-      name_te: "బ్రైడల్ చురా సెట్",
-      category: "Bangles",
-      category_te: "గాజులు",
-      price: 0,
-      image_url: "https://i.ibb.co/qFNrryR9/10744044-GL-a5f5e1bd-b4a7-43f7-9dbe-471d860947d9.jpg",
-      in_stock: true,
-    },
-    {
-      id: "lp-6",
-      name_en: "Stone Work Bangles",
-      name_te: "స్టోన్ వర్క్ గాజులు",
-      category: "Bangles",
-      category_te: "గాజులు",
-      price: 0,
-      image_url:
-        "https://images.unsplash.com/photo-1611591437281-460bfbe1220a?q=80&w=600&auto=format&fit=crop",
-      in_stock: true,
-    },
-    // Saree Materials
-    {
-      id: "lp-7",
-      name_en: "Aari Work Blouse Material",
-      name_te: "ఆరి వర్క్ బ్లౌజ్ మెటీరియల్",
-      category: "Saree Materials",
-      category_te: "సారీ మెటీరియల్స్",
-      price: 0,
-      image_url: "https://i.ibb.co/S8qCT65/aari-work-blouse-bits-2.jpg",
-      in_stock: true,
-    },
-    {
-      id: "lp-9",
-      name_en: "Saree Falls & Zigzag",
-      name_te: "చీర ఫాల్స్ & జిగ్‌జాగ్",
-      category: "Saree Materials",
-      category_te: "సారీ మెటీరియల్స్",
-      price: 0,
-      image_url: "https://i.ibb.co/99HmP0GP/hq720.jpg",
-      in_stock: true,
-    },
-    // Clips
-    {
-      id: "lp-10",
-      name_en: "Stone Hair Clips",
-      name_te: "స్టోన్ హెయిర్ క్లిప్స్",
-      category: "Clips",
-      category_te: "క్లిప్స్",
-      price: 0,
-      image_url:
-        "https://i.ibb.co/NnGvJdtV/Smart-BG-2024-11-11-883690ac-3ebd-493b-9088-b66722dc6302.png",
-      in_stock: true,
-    },
-    // Mehendhi
-    {
-      id: "lp-15",
-      name_en: "Bridal Mehendi Kit",
-      name_te: "బ్రైడల్ మెహందీ కిట్",
-      category: "Mehendhi cone's",
-      category_te: "మేహేంధి కోన్లు",
-      price: 0,
-      image_url:
-        "https://i.ibb.co/bjg68kTw/images-q-tbn-ANd9-Gc-Sp0o8-RYFm-Dqo9v-Vznpm1-MEm1yb-O81e-Sxapkg-s.jpg",
-      in_stock: true,
-    },
-    // Threads
-    {
-      id: "lp-16",
-      name_en: "Silk Embroidery Threads",
-      name_te: "సిల్క్ ఎంబ్రాయిడరీ త్రెడ్స్",
-      category: "Threads",
-      category_te: "ట్రేధ్లు",
-      price: 0,
-      image_url:
-        "https://i.ibb.co/DPGzVqYC/Premium-Quality-Multi-Color-Cotton-nbsp-Silk-Hand-Embroidery-Threads-For-School-Projects-amp-Home-Us.jpg",
-      in_stock: true,
-    },
-    {
-      id: "lp-17",
-      name_en: "Zari Thread Spools",
-      name_te: "జరీ త్రెడ్ స్పూల్స్",
-      category: "Threads",
-      category_te: "ట్రేధ్లు",
-      price: 0,
-      image_url: "https://i.ibb.co/9KNkgcZ/zari-thread-combo.jpg",
-      in_stock: true,
-    },
-    // Cosmetics & Accessories
-    {
-      id: "lp-18",
-      name_en: "Waterproof Eyeliner",
-      name_te: "వాటర్ ప్రూఫ్ ఐలైనర్",
-      category: "Cosmetics",
-      category_te: "సౌందర్య సాధనాలు",
-      price: 0,
-      image_url: "https://i.ibb.co/9HhBR3Sz/8902656303752-1-720x.jpg",
-      in_stock: true,
-    },
-  ];
 
   useEffect(() => {
-    fetchProducts();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    const fetchData = async () => {
+      try {
+        const [prodRes, catRes] = await Promise.all([
+          fetch(`${import.meta.env.VITE_API_URL}/api/products`),
+          fetch(`${import.meta.env.VITE_API_URL}/api/products/categories`),
+        ]);
+
+        const prodData = await prodRes.json();
+        const catData = await catRes.json();
+
+        if (prodData.success) setProducts(prodData.products);
+        if (catData.success) setCategories(catData.categories);
+      } catch (error) {
+        console.error("Error fetching products:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
   }, []);
 
-  const fetchProducts = async () => {
-    setLoading(true);
-    try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/products`);
-      const data = await response.json();
-      if (data.success) {
-        setProducts([...(data.products || []), ...localProducts]);
-      } else {
-        setProducts(localProducts);
-      }
-    } catch (error) {
-      console.error("Error fetching products:", error);
-      setProducts(localProducts);
-    } finally {
-      setLoading(false);
+  const filteredProducts = products.filter((p) => {
+    const matchesSearch =
+      p.name_en.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      p.name_te.includes(searchQuery);
+    const matchesCategory = selectedCategory === "all" || p.category === selectedCategory;
+    return matchesSearch && matchesCategory;
+  });
+
+  const toggleWishlist = (p: Product) => {
+    if (isInWishlist(p.id)) {
+      removeFromWishlist(p.id);
+      toast.info(language === "en" ? "Removed from wishlist" : "కోరికల జాబితా నుండి తీసివేయబడింది");
+    } else {
+      addToWishlist({
+        id: p.id,
+        type: "product",
+        name: language === "en" ? p.name_en : p.name_te,
+        image_url: p.image_url,
+        category: language === "en" ? p.category : p.category_te,
+      });
+      toast.success(language === "en" ? "Added to wishlist" : "కోరికల జాబితాకు జోడించబడింది");
     }
-  };
-
-  const filteredProducts =
-    selectedCategory === 0
-      ? products
-      : products.filter((p) => p.category === categories["en"][selectedCategory]); // Filter by English category name stored in DB
-
-  const handleEnquire = (productName: string) => {
-    const message = `Hi! I'm interested in the ${productName} from your store.`;
-    window.open(`https://wa.me/919381487134?text=${encodeURIComponent(message)}`, "_blank");
   };
 
   return (
     <Layout language={language} onLanguageChange={setLanguage}>
-      {/* Hero Section */}
-      <section className="pt-24 pb-12 md:pt-40 md:pb-16 relative">
-        <div className="absolute inset-0 bg-gradient-to-b from-maroon-dark/50 to-background" />
+      <section className="pt-24 pb-12 md:pt-40 md:pb-16 relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-b from-maroon-dark/50 to-background z-0" />
         <div className="container mx-auto px-4 relative z-10">
-          <div className="max-w-3xl mx-auto text-center">
-            <p className="text-accent font-medium mb-2">{t.subtitle}</p>
-            <h1 className="font-heading text-3xl md:text-6xl font-bold text-foreground mb-6">
-              {t.title}
-            </h1>
-            <p className="text-muted-foreground text-lg">{t.description}</p>
-          </div>
+          <ScrollReveal direction="up">
+            <div className="max-w-3xl mx-auto text-center">
+              <Badge className="mb-4 bg-accent/20 text-accent border-accent/30 px-4 py-1">
+                {t.subtitle}
+              </Badge>
+              <h1 className="font-heading text-4xl md:text-6xl font-bold text-foreground mb-6">
+                {t.title}
+              </h1>
+              <p className="text-muted-foreground text-lg leading-relaxed">{t.description}</p>
+            </div>
+          </ScrollReveal>
         </div>
       </section>
 
-      {/* Filter */}
-      <section className="py-6 border-b border-border/30 sticky top-16 md:top-20 bg-background/95 backdrop-blur-md z-30">
+      <section className="py-6 border-y border-border/20 sticky top-[72px] z-30 transition-all duration-300 glass-card">
         <div className="container mx-auto px-4">
-          <div className="flex items-center gap-4 overflow-x-auto pb-2 scrollbar-hide">
-            <Filter className="w-5 h-5 text-accent flex-shrink-0" />
-            {categoryList.map((category, index) => (
-              <button
-                key={index}
-                onClick={() => setSelectedCategory(index)}
-                className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
-                  selectedCategory === index
-                    ? "bg-accent text-accent-foreground"
-                    : "bg-secondary text-secondary-foreground hover:bg-secondary/80"
-                }`}
-              >
-                {category}
-              </button>
-            ))}
+          <div className="flex flex-col md:flex-row gap-6 items-center">
+            {/* Search Input */}
+            <div className="relative w-full md:w-80 group">
+              <div className="absolute inset-0 bg-accent/5 rounded-full blur-md opacity-0 group-focus-within:opacity-100 transition-opacity" />
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-accent/70 transition-colors group-focus-within:text-accent" />
+              <input
+                type="text"
+                placeholder={t.searchPlaceholder}
+                className="w-full bg-background/50 border border-border/30 rounded-full py-2.5 pl-11 pr-5 text-sm focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent/50 transition-all backdrop-blur-sm relative z-10"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </div>
+
+            {/* Categories Scroller */}
+            <div className="relative w-full overflow-hidden flex-1 group">
+              {/* Left mask for horizontal scroll indicator */}
+              <div className="absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-background/90 to-transparent z-10 pointer-events-none" />
+
+              <div className="flex gap-3 overflow-x-auto py-2 no-scrollbar px-4 scroll-smooth">
+                <button
+                  onClick={() => setSelectedCategory("all")}
+                  className={`px-6 py-2 rounded-full text-xs font-semibold whitespace-nowrap transition-all duration-300 border shadow-sm ${
+                    selectedCategory === "all"
+                      ? "bg-accent text-accent-foreground border-accent shadow-accent/20 scale-105"
+                      : "bg-background/40 text-muted-foreground border-border/30 hover:border-accent/40 hover:bg-background/60"
+                  }`}
+                >
+                  {t.allCategories}
+                </button>
+                {categories.map((cat) => (
+                  <button
+                    key={cat.en}
+                    onClick={() => setSelectedCategory(cat.en)}
+                    className={`px-6 py-2 rounded-full text-xs font-semibold whitespace-nowrap transition-all duration-300 border shadow-sm ${
+                      selectedCategory === cat.en
+                        ? "bg-accent text-white border-accent shadow-accent/20 scale-105"
+                        : "bg-background/40 text-muted-foreground border-border/30 hover:border-accent/40 hover:bg-background/60"
+                    }`}
+                  >
+                    {language === "en" ? cat.en : cat.te}
+                  </button>
+                ))}
+              </div>
+
+              {/* Right mask for horizontal scroll indicator */}
+              <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-background/90 to-transparent z-10 pointer-events-none" />
+            </div>
           </div>
         </div>
       </section>
 
-      {/* Products Grid */}
-      <section className="py-12 md:py-16">
+      <section className="py-16 md:py-24">
         <div className="container mx-auto px-4">
           {loading ? (
-            <div className="flex justify-center py-20">
-              <Loader2 className="w-8 h-8 animate-spin text-accent" />
+            <div className="flex flex-col items-center justify-center py-20 gap-4">
+              <Loader2 className="w-10 h-10 animate-spin text-accent" />
+              <p className="text-muted-foreground animate-pulse">Designing your collection...</p>
             </div>
           ) : filteredProducts.length === 0 ? (
-            <div className="text-center py-20 text-muted-foreground">{t.noProducts}</div>
+            <div className="text-center py-20 bg-secondary/10 rounded-3xl border border-dashed border-border/50">
+              <ShoppingBag className="w-12 h-12 text-muted-foreground mx-auto mb-4 opacity-20" />
+              <p className="text-muted-foreground text-lg">{t.noProducts}</p>
+            </div>
           ) : (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
-              {filteredProducts.map((product) => (
-                <Card
-                  key={product.id}
-                  variant="elevated"
-                  className="group overflow-hidden hover-lift cursor-pointer"
-                  onClick={() => handleProductClick(product)}
-                >
-                  <div className="aspect-square relative overflow-hidden">
-                    <img
-                      src={product.image_url}
-                      alt={language === "en" ? product.name_en : product.name_te}
-                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-                    />
-                    {/* Stock Badge */}
-                    <div
-                      className={`absolute top-3 right-3 px-2 py-1 rounded-full text-xs font-medium ${
-                        product.in_stock
-                          ? "bg-success/20 text-[hsl(142,76%,36%)]"
-                          : "bg-destructive/20 text-destructive"
-                      }`}
-                    >
-                      {product.in_stock ? t.inStock : t.outOfStock}
-                    </div>
-                  </div>
-                  <CardContent className="p-4">
-                    <p className="text-accent text-xs font-medium mb-1">
-                      {language === "en" ? product.category : product.category_te}
-                    </p>
-                    <h3 className="font-heading font-semibold text-foreground mb-2 line-clamp-1">
-                      {language === "en" ? product.name_en : product.name_te}
-                    </h3>
-                    <div className="flex items-center justify-between mt-2">
-                      <p className="text-sm font-medium text-foreground/80">
-                        {product.price > 0 ? `₹${product.price}` : t.contactPrice}
-                      </p>
-                      <Button
-                        variant="ghost"
-                        size="sm"
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+              {filteredProducts.map((p, idx) => (
+                <ScrollReveal key={p.id} direction="up" delay={idx * 0.05}>
+                  <Card className="group h-full overflow-hidden border-border/30 hover:shadow-2xl hover:shadow-accent/10 transition-all duration-500 hover:-translate-y-2 bg-background flex flex-col">
+                    <div className="aspect-[3/4] relative overflow-hidden">
+                      <img
+                        src={p.image_url}
+                        alt={language === "en" ? p.name_en : p.name_te}
+                        className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                      />
+                      {!p.in_stock && (
+                        <div className="absolute inset-0 bg-background/60 backdrop-blur-[2px] flex items-center justify-center z-10">
+                          <Badge
+                            variant="destructive"
+                            className="uppercase tracking-widest px-4 py-1"
+                          >
+                            Out of Stock
+                          </Badge>
+                        </div>
+                      )}
+                      <div className="absolute top-3 left-3 flex flex-col gap-2 z-20">
+                        <Badge className="bg-background/80 backdrop-blur-md text-foreground border-none shadow-sm uppercase text-[10px] tracking-tighter">
+                          {language === "en" ? p.category : p.category_te}
+                        </Badge>
+                      </div>
+
+                      {/* Wishlist Toggle Button */}
+                      <button
                         onClick={(e) => {
-                          e.stopPropagation();
-                          handleEnquire(product.name_en);
+                          e.preventDefault();
+                          toggleWishlist(p);
                         }}
-                        disabled={!product.in_stock}
+                        className={`absolute top-3 right-3 p-2.5 rounded-full transition-all duration-300 z-30 ${
+                          isInWishlist(p.id)
+                            ? "bg-accent text-accent-foreground shadow-lg scale-110"
+                            : "bg-background/60 backdrop-blur-md text-accent hover:bg-accent hover:text-white"
+                        }`}
                       >
-                        <MessageCircle className="w-4 h-4" />
-                      </Button>
+                        <Heart className={`w-4 h-4 ${isInWishlist(p.id) ? "fill-current" : ""}`} />
+                      </button>
                     </div>
-                  </CardContent>
-                </Card>
+                    <CardContent className="p-5 flex-1 flex flex-col">
+                      <div className="mb-4">
+                        <h3 className="font-heading text-xl font-bold mb-1 group-hover:text-accent transition-colors line-clamp-1">
+                          {language === "en" ? p.name_en : p.name_te}
+                        </h3>
+                        <div className="flex items-center justify-between mt-2">
+                          <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                            <Sparkles className="w-3 h-3 text-accent" />
+                            <span>Authentic Design</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <Link to="/contact" className="mt-auto">
+                        <Button className="w-full bg-accent hover:bg-accent/90 text-white rounded-full group-hover:shadow-lg transition-all flex items-center gap-2">
+                          <ShoppingBag className="w-4 h-4" />
+                          {t.buyNow}
+                        </Button>
+                      </Link>
+                    </CardContent>
+                  </Card>
+                </ScrollReveal>
               ))}
             </div>
           )}
         </div>
       </section>
-
-      {/* Product Detail Modal */}
-      <Dialog open={!!selectedProduct} onOpenChange={(open) => !open && setSelectedProduct(null)}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-          {selectedProduct && (
-            <div className="grid md:grid-cols-2 gap-8 pt-6">
-              {/* Product Image */}
-              <div className="aspect-square relative overflow-hidden rounded-xl border border-border/30">
-                <img
-                  src={selectedProduct.image_url}
-                  alt={language === "en" ? selectedProduct.name_en : selectedProduct.name_te}
-                  className="w-full h-full object-cover"
-                />
-              </div>
-
-              {/* Product Info */}
-              <div className="flex flex-col">
-                <DialogHeader className="p-0 text-left mb-6">
-                  <p className="text-accent font-medium mb-2">
-                    {language === "en" ? selectedProduct.category : selectedProduct.category_te}
-                  </p>
-                  <DialogTitle className="text-3xl font-heading font-bold">
-                    {language === "en" ? selectedProduct.name_en : selectedProduct.name_te}
-                  </DialogTitle>
-                </DialogHeader>
-
-                <div className="flex items-center gap-2 mb-6">
-                  <div
-                    className={`px-2 py-1 rounded-full text-xs font-medium ${
-                      selectedProduct.in_stock
-                        ? "bg-success/10 text-[hsl(142,76%,36%)]"
-                        : "bg-destructive/10 text-destructive"
-                    }`}
-                  >
-                    {selectedProduct.in_stock ? t.inStock : t.outOfStock}
-                  </div>
-                </div>
-
-                <div className="flex items-baseline gap-2 mb-8">
-                  {selectedProduct.price > 0 && <IndianRupee className="w-5 h-5 text-foreground" />}
-                  <span className="text-3xl font-bold">
-                    {selectedProduct.price > 0 ? selectedProduct.price : t.contactPrice}
-                  </span>
-                </div>
-
-                <div className="space-y-4 mb-8">
-                  <h4 className="font-semibold">{language === "en" ? "Description" : "వివరణ"}</h4>
-                  <p className="text-muted-foreground leading-relaxed">
-                    {language === "en"
-                      ? "Premium quality fashion product handcrafted for perfection. Available in various colors and designs."
-                      : "ఖచ్చితత్వం కోసం రూపొందించబడిన ప్రీమియం నాణ్యత ఫ్యాషన్ ఉత్పత్తి. వివిధ రంగులు మరియు డిజైన్లలో అందుబాటులో ఉంది."}
-                  </p>
-                </div>
-
-                <div className="mt-auto space-y-3">
-                  <Button
-                    className="w-full gap-2 h-12 text-lg"
-                    onClick={() => handleEnquire(selectedProduct.name_en)}
-                    disabled={!selectedProduct.in_stock}
-                  >
-                    <MessageCircle className="w-5 h-5" />
-                    {t.enquire}
-                  </Button>
-                  <p className="text-xs text-center text-muted-foreground">
-                    {language === "en"
-                      ? "Get personalized tailoring advice for this product"
-                      : "ఈ ఉత్పత్తి కోసం వ్యక్తిగతీకరించిన టైలరింగ్ సలహాలను పొందండి"}
-                  </p>
-                </div>
-              </div>
-
-              {/* Related Products Section */}
-              <div className="md:col-span-2 mt-8 pt-8 border-t border-border/30">
-                <div className="flex items-center gap-2 mb-6">
-                  <ShoppingBag className="w-5 h-5 text-accent" />
-                  <h4 className="text-xl font-heading font-bold">
-                    {language === "en"
-                      ? "Related Products (AI Recommendations)"
-                      : "సంబంధిత ఉత్పత్తులు (AI సిఫార్సులు)"}
-                  </h4>
-                </div>
-
-                {recommendationsLoading ? (
-                  <div className="flex justify-center py-8">
-                    <Loader2 className="w-6 h-6 animate-spin text-accent" />
-                  </div>
-                ) : recommendations.length > 0 ? (
-                  <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                    {recommendations.map((rec) => (
-                      <div
-                        key={rec.id}
-                        className="group cursor-pointer"
-                        onClick={() => handleProductClick(rec)}
-                      >
-                        <div className="aspect-square rounded-lg overflow-hidden border border-border/30 mb-2">
-                          <img
-                            src={rec.image_url}
-                            alt={language === "en" ? rec.name_en : rec.name_te}
-                            className="w-full h-full object-cover transition-transform group-hover:scale-105"
-                          />
-                        </div>
-                        <h5 className="text-sm font-medium line-clamp-1 group-hover:text-accent transition-colors">
-                          {language === "en" ? rec.name_en : rec.name_te}
-                        </h5>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-sm text-muted-foreground italic">
-                    {language === "en"
-                      ? "No recommendations found for this item."
-                      : "ఈ ఐటెమ్ కోసం ఎటువంటి సిఫార్సులు కనుగొనబడలేదు."}
-                  </p>
-                )}
-              </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
     </Layout>
   );
 };

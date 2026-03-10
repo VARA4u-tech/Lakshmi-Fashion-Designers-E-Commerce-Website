@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { Menu, X, Phone, MessageCircle } from "lucide-react";
+import { Menu, X, Phone, MessageCircle, Heart } from "lucide-react";
+import { useWishlist } from "@/contexts/WishlistContext";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import logo from "@/assets/logo.jpg";
@@ -20,6 +21,7 @@ interface HeaderProps {
 }
 
 export function Header({ language, onLanguageChange }: HeaderProps) {
+  const { wishlist } = useWishlist();
   const [isOpen, setIsOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const location = useLocation();
@@ -93,6 +95,21 @@ export function Header({ language, onLanguageChange }: HeaderProps) {
 
           {/* Actions */}
           <div className="flex items-center gap-3">
+            {/* Wishlist Link */}
+            <Link
+              to="/wishlist"
+              className="relative p-2 text-accent hover:text-accent/80 transition-colors"
+            >
+              <Heart
+                className={cn("w-5 h-5", location.pathname === "/wishlist" && "fill-current")}
+              />
+              {wishlist.length > 0 && (
+                <span className="absolute top-0 right-0 bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center shadow-sm">
+                  {wishlist.length}
+                </span>
+              )}
+            </Link>
+
             {/* Language Toggle - Desktop */}
             <button
               onClick={() => onLanguageChange(language === "en" ? "te" : "en")}

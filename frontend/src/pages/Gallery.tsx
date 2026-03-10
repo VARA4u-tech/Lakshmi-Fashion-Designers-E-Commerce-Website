@@ -3,6 +3,9 @@ import { Layout } from "@/components/layout/Layout";
 import { X, Sparkles, Loader2 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useWishlist } from "@/contexts/WishlistContext";
+import { toast } from "sonner";
+import { Heart } from "lucide-react";
 
 interface GalleryItem {
   id: string;
@@ -41,6 +44,7 @@ const pageContent = {
 
 const Gallery = () => {
   const { language, setLanguage } = useLanguage();
+  const { addToWishlist, removeFromWishlist, isInWishlist } = useWishlist();
   const [selectedFilter, setSelectedFilter] = useState(0);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
@@ -60,7 +64,7 @@ const Gallery = () => {
       const response = await fetch(`${import.meta.env.VITE_API_URL}/api/gallery`);
       const data = await response.json();
       if (data.success) {
-        setGalleryItems(data.gallery || []);
+        setGalleryItems(data.items || []);
       }
     } catch (error) {
       console.error("Error fetching gallery items:", error);
@@ -71,6 +75,22 @@ const Gallery = () => {
 
   // Show all items under the "Tailoring" heading
   const filteredItems = galleryItems;
+
+  const toggleWishlist = (item: GalleryItem) => {
+    if (isInWishlist(item.id)) {
+      removeFromWishlist(item.id);
+      toast.info(language === "en" ? "Removed from wishlist" : "కోరికల జాబితా నుండి తీసివేయబడింది");
+    } else {
+      addToWishlist({
+        id: item.id,
+        type: "gallery",
+        name: language === "en" ? item.title_en : item.title_te,
+        image_url: item.image_url,
+        category: item.category,
+      });
+      toast.success(language === "en" ? "Added to wishlist" : "కోరికల జాబితాకు జోడించబడింది");
+    }
+  };
 
   return (
     <Layout language={language} onLanguageChange={setLanguage}>
@@ -130,10 +150,25 @@ const Gallery = () => {
                       alt={language === "en" ? item.title_en : item.title_te}
                       className="w-full object-cover transition-transform duration-500 group-hover:scale-105"
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-background/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-4">
+                    <div className="absolute inset-0 bg-gradient-to-t from-background/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end justify-between p-4">
                       <p className="font-heading font-semibold text-foreground">
                         {language === "en" ? item.title_en : item.title_te}
                       </p>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleWishlist(item);
+                        }}
+                        className={`p-2 rounded-full transition-all duration-300 ${
+                          isInWishlist(item.id)
+                            ? "bg-accent text-accent-foreground shadow-lg scale-110"
+                            : "bg-background/60 backdrop-blur-md text-accent hover:bg-accent hover:text-white"
+                        }`}
+                      >
+                        <Heart
+                          className={`w-4 h-4 ${isInWishlist(item.id) ? "fill-current" : ""}`}
+                        />
+                      </button>
                     </div>
                   </div>
                 </div>

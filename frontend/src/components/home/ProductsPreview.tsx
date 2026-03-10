@@ -1,145 +1,182 @@
-import { Link } from "react-router-dom";
-import { Button } from "@/components/ui/button";
+import { useState, useEffect } from "react";
+import { ScrollReveal } from "@/components/ui/ScrollReveal";
 import { Card, CardContent } from "@/components/ui/card";
-import { ArrowRight, ShoppingBag } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { ShoppingBag, ArrowRight, Loader2, Heart } from "lucide-react";
+import { Link } from "react-router-dom";
+import { useWishlist } from "@/contexts/WishlistContext";
+import { toast } from "sonner";
+
+interface Product {
+  id: string;
+  name_en: string;
+  name_te: string;
+  category: string;
+  category_te: string;
+  price: number;
+  image_url: string;
+}
 
 interface ProductsPreviewProps {
   language: "en" | "te";
 }
 
-const products = [
-  {
-    id: 1,
-    name: { en: "Traditional Jhumkas", te: "సాంప్రదాయ జుమ్కాలు" },
-    category: { en: "Earrings", te: "చెవి పోగులు" },
-    price: 850,
-    image: "https://i.ibb.co/zhxJ9ZYQ/IMG-20251207-WA0032.jpg",
-    inStock: true,
-  },
-  {
-    id: 2,
-    name: { en: "saree linings", te: "సారీ లింగీంగ్" },
-    category: { en: "linings", te: "లింగీంగ్" },
-    price: 2500,
-    image: "https://i.ibb.co/zhGJNkSG/handbag-linings.jpg",
-    inStock: true,
-  },
-  {
-    id: 3,
-    name: { en: "Handmade Bangles", te: "హాండ్ మెడ్ బ్యాగ్" },
-    category: { en: "Handmade Bangles", te: "హాండ్ మెడ్ బ్యాగ్" },
-    price: 1800,
-    image: "https://i.ibb.co/wZg22x5k/IMG-20251207-WA0002.jpg",
-    inStock: true,
-  },
-  {
-    id: 4,
-    name: { en: "Gold Bangles Set", te: "గోల్డ్ గాజుల సెట్" },
-    category: { en: "Bangles", te: "గాజులు" },
-    price: 3200,
-    image: "https://images.unsplash.com/photo-1611591437281-460bfbe1220a?w=400&h=400&fit=crop",
-    inStock: false,
-  },
-];
-
-const sectionContent = {
+const content = {
   en: {
-    subtitle: "Fancy Store",
-    title: "Beautiful Accessories",
+    title: "New Collections",
+    subtitle: "Just Arrived",
     description:
-      "Complete your look with our curated collection of jewelry, bangles, and fashion accessories.",
-    cta: "Explore All Products",
-    inStock: "In Stock",
-    outOfStock: "Out of Stock",
+      "Explore our latest arrivals of designer fabrics and custom-tailored masterpieces.",
+    viewAll: "Explore Collection",
+    enquire: "View Details",
   },
   te: {
-    subtitle: "ఫ్యాన్సీ స్టోర్",
-    title: "అందమైన యాక్సెసరీలు",
+    title: "కొత్త సేకరణలు",
+    subtitle: "ఇప్పుడే చేరుకున్నాయి",
     description:
-      "మా క్యూరేటెడ్ జ్యువెలరీ, బ్యాగులు మరియు ఫ్యాషన్ యాక్సెసరీల సేకరణతో మీ లుక్పు పూర్తి చేయండి.",
-    cta: "అన్ని ప్రొడక్ట్‌లను ప్రోదేశించండి",
-    inStock: "స్టాక్‌లో ఉంది",
-    outOfStock: "స్టాక్ అయిపోయింది",
+      "డిజైనర్ ఫ్యాబ్రిక్స్ మరియు మా కస్టమ్-టైలర్డ్ మాస్టర్‌పీస్‌ల తాజా రాకను అన్వేషించండి.",
+    viewAll: "అన్నీ చూడండి",
+    enquire: "మరిన్ని వివరాలు",
   },
 };
 
-import { ScrollReveal } from "@/components/ui/ScrollReveal";
-
-// ... existing imports ...
-
 export function ProductsPreview({ language }: ProductsPreviewProps) {
-  const t = sectionContent[language];
+  const { addToWishlist, removeFromWishlist, isInWishlist } = useWishlist();
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+  const t = content[language];
+
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/products`);
+        const data = await response.json();
+        if (data.success) {
+          setProducts(data.products.slice(0, 4));
+        }
+      } catch (error) {
+        console.error("Error fetching products:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchProducts();
+  }, []);
+
+  const toggleWishlist = (p: Product) => {
+    if (isInWishlist(p.id)) {
+      removeFromWishlist(p.id);
+      toast.info(language === "en" ? "Removed from wishlist" : "కోరికల జాబితా నుండి తీసివేయబడింది");
+    } else {
+      addToWishlist({
+        id: p.id,
+        type: "product",
+        name: language === "en" ? p.name_en : p.name_te,
+        image_url: p.image_url,
+        category: language === "en" ? p.category : p.category_te,
+      });
+      toast.success(language === "en" ? "Added to wishlist" : "కోరికల జాబితాకు జోడించబడింది");
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex justify-center py-20">
+        <Loader2 className="w-8 h-8 animate-spin text-accent" />
+      </div>
+    );
+  }
+
+  if (products.length === 0) return null;
 
   return (
-    <section className="py-12 md:py-20 bg-secondary/30 relative">
-      {/* Decorative top border */}
-      <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-accent/50 to-transparent" />
+    <section className="py-24 bg-secondary/5 relative overflow-hidden">
+      {/* Background visual elements */}
+      <div className="absolute top-0 left-0 w-64 h-64 bg-accent/5 rounded-full blur-3xl -ml-32 -mt-32" />
+      <div className="absolute bottom-0 right-0 w-64 h-64 bg-accent/5 rounded-full blur-3xl -mr-32 -mb-32" />
 
-      <div className="container mx-auto px-4">
-        {/* Section Header */}
-        <ScrollReveal direction="up" duration={0.6} width="100%">
-          <div className="text-center max-w-2xl mx-auto mb-16">
-            <p className="text-accent font-medium mb-2">{t.subtitle}</p>
-            <h2 className="font-heading text-4xl md:text-5xl font-bold text-foreground mb-4">
-              {t.title}
-            </h2>
-            <p className="text-muted-foreground">{t.description}</p>
-          </div>
-        </ScrollReveal>
+      <div className="container mx-auto px-4 relative z-10">
+        <div className="flex flex-col md:flex-row items-end justify-between mb-16 gap-6">
+          <ScrollReveal direction="left">
+            <div className="max-w-2xl">
+              <div className="flex items-center gap-2 mb-4">
+                <div className="w-8 h-[2px] bg-accent" />
+                <p className="text-accent font-medium uppercase tracking-widest text-xs">
+                  {t.subtitle}
+                </p>
+              </div>
+              <h2 className="font-heading text-4xl md:text-5xl font-bold mb-4 italic">{t.title}</h2>
+              <p className="text-muted-foreground text-lg">{t.description}</p>
+            </div>
+          </ScrollReveal>
 
-        {/* Products Grid */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
+          <ScrollReveal direction="right">
+            <Link to="/products">
+              <Button
+                variant="outline"
+                className="border-accent text-accent hover:bg-accent hover:text-white rounded-full group"
+              >
+                {t.viewAll}
+                <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
+              </Button>
+            </Link>
+          </ScrollReveal>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
           {products.map((product, index) => (
-            <ScrollReveal
-              key={product.id}
-              direction="up"
-              delay={index * 0.1}
-              duration={0.5}
-              width="100%"
-            >
-              <Card variant="elevated" className="group overflow-hidden hover-lift h-full">
-                <div className="aspect-square relative overflow-hidden">
+            <ScrollReveal key={product.id} direction="up" delay={index * 0.1}>
+              <Card className="group h-full overflow-hidden border-border/30 hover:shadow-xl hover:shadow-accent/5 transition-all duration-500 hover:-translate-y-2 bg-background flex flex-col">
+                <div className="aspect-[4/5] relative overflow-hidden">
                   <img
-                    src={product.image}
-                    alt={product.name[language]}
-                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                    src={product.image_url}
+                    alt={language === "en" ? product.name_en : product.name_te}
+                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
                   />
-                  {/* Stock Badge */}
-                  <div
-                    className={`absolute top-3 right-3 px-2 py-1 rounded-full text-xs font-medium ${
-                      product.inStock
-                        ? "bg-success/20 text-success"
-                        : "bg-destructive/20 text-destructive"
+                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center translate-y-4 group-hover:translate-y-0 duration-300">
+                    <Link to="/products">
+                      <Button className="bg-white text-black hover:bg-white/90">{t.enquire}</Button>
+                    </Link>
+                  </div>
+                  <button
+                    onClick={(e) => {
+                      e.preventDefault();
+                      toggleWishlist(product);
+                    }}
+                    className={`absolute top-3 right-3 p-2 rounded-full transition-all duration-300 z-20 ${
+                      isInWishlist(product.id)
+                        ? "bg-accent text-accent-foreground shadow-lg scale-110 opacity-100"
+                        : "bg-background/60 backdrop-blur-md text-accent hover:bg-accent hover:text-white opacity-0 group-hover:opacity-100"
                     }`}
                   >
-                    {product.inStock ? t.inStock : t.outOfStock}
+                    <Heart
+                      className={`w-4 h-4 ${isInWishlist(product.id) ? "fill-current" : ""}`}
+                    />
+                  </button>
+                  <div className="absolute top-3 left-3">
+                    <Badge className="bg-accent text-white border-none text-[10px] uppercase font-bold">
+                      {language === "en" ? product.category : product.category_te}
+                    </Badge>
                   </div>
                 </div>
-                <CardContent className="p-4">
-                  <p className="text-accent text-xs font-medium mb-1">
-                    {product.category[language]}
-                  </p>
-                  <h3 className="font-heading font-semibold text-foreground mb-2 line-clamp-1">
-                    {product.name[language]}
-                  </h3>
+                <CardContent className="p-5 flex-1 flex flex-col justify-between">
+                  <div>
+                    <h3 className="font-heading font-bold text-lg mb-1 group-hover:text-accent transition-colors">
+                      {language === "en" ? product.name_en : product.name_te}
+                    </h3>
+                  </div>
+                  <div className="mt-4 pt-4 border-t border-border/50 flex items-center justify-between">
+                    <span className="text-[10px] uppercase text-muted-foreground font-medium tracking-wider">
+                      New Arrival
+                    </span>
+                    <ShoppingBag className="w-4 h-4 text-accent opacity-50 group-hover:opacity-100 transition-opacity" />
+                  </div>
                 </CardContent>
               </Card>
             </ScrollReveal>
           ))}
         </div>
-
-        {/* CTA */}
-        <ScrollReveal direction="up" delay={0.4} duration={0.6}>
-          <div className="text-center mt-12">
-            <Link to="/products">
-              <Button variant="gold" size="lg">
-                <ShoppingBag className="w-4 h-4 mr-2" />
-                {t.cta}
-                <ArrowRight className="w-4 h-4 ml-2" />
-              </Button>
-            </Link>
-          </div>
-        </ScrollReveal>
       </div>
     </section>
   );

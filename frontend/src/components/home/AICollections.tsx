@@ -2,16 +2,16 @@ import { useState, useEffect } from "react";
 import { ScrollReveal } from "@/components/ui/ScrollReveal";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Sparkles, Loader2, ArrowRight } from "lucide-react";
+import { Sparkles, Loader2, ArrowRight, Heart } from "lucide-react";
 import { Link } from "react-router-dom";
+import { useWishlist } from "@/contexts/WishlistContext";
+import { toast } from "sonner";
 
-interface Product {
+interface GalleryItem {
   id: string;
-  name_en: string;
-  name_te: string;
+  title_en: string;
+  title_te: string;
   category: string;
-  category_te: string;
-  price: number;
   image_url: string;
   cluster_id: number;
 }
@@ -27,34 +27,35 @@ const clusterTitles = {
 
 const sectionContent = {
   en: {
-    title: "AI Curated Collections",
-    subtitle: "Recommended for You",
-    description: "Our AI engine has grouped these items based on style patterns and popularity.",
-    viewMore: "View All",
+    title: "AI Curated Gallery",
+    subtitle: "Recommended Visuals",
+    description: "Our AI engine has grouped our works based on design patterns and categories.",
+    viewMore: "View Gallery",
   },
   te: {
-    title: "AI క్యూరేటెడ్ కలెక్షన్లు",
-    subtitle: "మీ కోసం సిఫార్సు చేయబడింది",
-    description: "శైలి నమూనాలు మరియు జనాదరణ ఆధారంగా మా AI ఇంజిన్ ఈ అంశాలను సమూహపరిచింది.",
-    viewMore: "అన్నీ చూడండి",
+    title: "AI క్యూరేటెడ్ గ్యాలరీ",
+    subtitle: "సిఫార్సు చేయబడినవి",
+    description: "డిజైన్ నమూనాలు మరియు వర్గాల ఆధారంగా మా AI ఇంజిన్ మా పనులను సమూహపరిచింది.",
+    viewMore: "గ్యాలరీని చూడండి",
   },
 };
 
 export function AICollections({ language }: AICollectionsProps) {
-  const [clusters, setClusters] = useState<{ [key: number]: Product[] }>({});
+  const { addToWishlist, removeFromWishlist, isInWishlist } = useWishlist();
+  const [clusters, setClusters] = useState<{ [key: number]: GalleryItem[] }>({});
   const [loading, setLoading] = useState(true);
   const t = sectionContent[language];
 
   useEffect(() => {
     const fetchClusters = async () => {
       try {
-        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/products/clusters`);
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/gallery/clusters`);
         const data = await response.json();
         if (data.success) {
           const grouped = data.clusters.reduce(
-            (acc: Record<number, Product[]>, product: Product) => {
-              if (!acc[product.cluster_id]) acc[product.cluster_id] = [];
-              acc[product.cluster_id].push(product);
+            (acc: Record<number, GalleryItem[]>, item: GalleryItem) => {
+              if (!acc[item.cluster_id]) acc[item.cluster_id] = [];
+              acc[item.cluster_id].push(item);
               return acc;
             },
             {},
@@ -70,6 +71,22 @@ export function AICollections({ language }: AICollectionsProps) {
 
     fetchClusters();
   }, []);
+
+  const toggleWishlist = (item: GalleryItem) => {
+    if (isInWishlist(item.id)) {
+      removeFromWishlist(item.id);
+      toast.info(language === "en" ? "Removed from wishlist" : "కోరికల జాబితా నుండి తీసివేయబడింది");
+    } else {
+      addToWishlist({
+        id: item.id,
+        type: "gallery",
+        name: language === "en" ? item.title_en : item.title_te,
+        image_url: item.image_url,
+        category: item.category,
+      });
+      toast.success(language === "en" ? "Added to wishlist" : "కోరికల జాబితాకు జోడించబడింది");
+    }
+  };
 
   if (loading) {
     return (
@@ -101,7 +118,7 @@ export function AICollections({ language }: AICollectionsProps) {
           </div>
         </ScrollReveal>
 
-        {Object.entries(clusters).map(([clusterId, products], index) => (
+        {Object.entries(clusters).map(([clusterId, items], index) => (
           <div key={clusterId} className="mb-20 last:mb-0">
             <ScrollReveal direction="left" delay={index * 0.1}>
               <div className="flex items-center justify-between mb-8">
@@ -114,11 +131,11 @@ export function AICollections({ language }: AICollectionsProps) {
                     variant="outline"
                     className="text-accent border-accent/30 lowercase font-medium"
                   >
-                    {products.length} {language === "en" ? "items" : "ఐటెమ్స్"}
+                    {items.length} {language === "en" ? "items" : "ఐటెమ్స్"}
                   </Badge>
                 </div>
                 <Link
-                  to="/products"
+                  to="/gallery"
                   className="text-accent hover:underline flex items-center gap-1 text-sm font-medium"
                 >
                   {t.viewMore} <ArrowRight className="w-4 h-4" />
@@ -127,29 +144,44 @@ export function AICollections({ language }: AICollectionsProps) {
             </ScrollReveal>
 
             <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-6">
-              {products.slice(0, 5).map((product, pIndex) => (
-                <ScrollReveal key={product.id} direction="up" delay={pIndex * 0.05}>
+              {items.slice(0, 5).map((item, pIndex) => (
+                <ScrollReveal key={item.id} direction="up" delay={pIndex * 0.05}>
                   <Card className="group h-full overflow-hidden border-border/30 hover:shadow-2xl hover:shadow-accent/10 transition-all duration-500 hover:-translate-y-2">
                     <div className="aspect-[4/5] relative overflow-hidden">
                       <img
-                        src={product.image_url}
-                        alt={language === "en" ? product.name_en : product.name_te}
+                        src={item.image_url}
+                        alt={language === "en" ? item.title_en : item.title_te}
                         className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
                       />
-                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                        <Link to="/products">
+                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-3">
+                        <Link to="/gallery">
                           <Badge className="bg-white text-black hover:bg-white/90 cursor-pointer">
-                            View Details
+                            View Gallery
                           </Badge>
                         </Link>
                       </div>
+                      <button
+                        onClick={(e) => {
+                          e.preventDefault();
+                          toggleWishlist(item);
+                        }}
+                        className={`absolute top-2 right-2 p-2 rounded-full transition-all duration-300 z-20 ${
+                          isInWishlist(item.id)
+                            ? "bg-accent text-accent-foreground shadow-lg scale-110 opacity-100"
+                            : "bg-background/60 backdrop-blur-md text-accent hover:bg-accent hover:text-white opacity-0 group-hover:opacity-100"
+                        }`}
+                      >
+                        <Heart
+                          className={`w-3.5 h-3.5 ${isInWishlist(item.id) ? "fill-current" : ""}`}
+                        />
+                      </button>
                     </div>
                     <CardContent className="p-4 bg-secondary/10">
                       <h4 className="font-medium text-sm line-clamp-1 mb-1 group-hover:text-accent transition-colors">
-                        {language === "en" ? product.name_en : product.name_te}
+                        {language === "en" ? item.title_en : item.title_te}
                       </h4>
-                      <p className="text-xs text-muted-foreground">
-                        {language === "en" ? product.category : product.category_te}
+                      <p className="text-xs text-muted-foreground uppercase tracking-wider">
+                        {item.category}
                       </p>
                     </CardContent>
                   </Card>

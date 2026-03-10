@@ -4,6 +4,43 @@ import { verifyToken } from "../middleware/verifyToken.js";
 
 const router = express.Router();
 
+// GET /api/gallery/recommendations/:id - Proxy to Python ML Service
+router.get("/recommendations/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const mlServiceUrl = process.env.ML_SERVICE_URL || "http://localhost:8000";
+
+    const response = await fetch(
+      `${mlServiceUrl}/gallery/recommendations/${id}`,
+    );
+    const data = await response.json();
+
+    if (!response.ok) throw new Error(data.detail || "ML Service Error");
+    res.json(data);
+  } catch (err) {
+    console.error("ML Proxy Error:", err.message);
+    res
+      .status(500)
+      .json({ error: "Recommendation engine is currently offline." });
+  }
+});
+
+// GET /api/gallery/clusters - Proxy to Python ML Service
+router.get("/clusters", async (req, res) => {
+  try {
+    const mlServiceUrl = process.env.ML_SERVICE_URL || "http://localhost:8000";
+
+    const response = await fetch(`${mlServiceUrl}/gallery/clusters`);
+    const data = await response.json();
+
+    if (!response.ok) throw new Error(data.detail || "ML Service Error");
+    res.json(data);
+  } catch (err) {
+    console.error("ML Proxy Error:", err.message);
+    res.status(500).json({ error: "Grouping engine is currently offline." });
+  }
+});
+
 // GET /api/gallery - Public: fetch all gallery items
 router.get("/", async (req, res) => {
   try {
